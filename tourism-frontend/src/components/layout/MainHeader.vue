@@ -1,211 +1,109 @@
 <template>
-  <el-header class="main-header">
-    <div class="header-container">
-      <!-- Logo -->
+  <header class="main-header">
+    <div class="header-inner">
       <router-link to="/" class="logo">
-        <el-icon :size="28"><Sunny /></el-icon>
-        <span class="logo-text">智能旅游</span>
+        <div class="logo-icon">🏔</div>
+        <span class="logo-text">智游</span>
       </router-link>
 
-      <!-- 导航菜单 -->
-      <el-menu
-        mode="horizontal"
-        :default-active="activeIndex"
-        :ellipsis="false"
-        class="nav-menu"
-        router
-      >
-        <el-menu-item index="/">
-          <el-icon><HomeFilled /></el-icon>
-          <span>首页</span>
-        </el-menu-item>
-        <el-menu-item index="/attractions">
-          <el-icon><Location /></el-icon>
-          <span>景点</span>
-        </el-menu-item>
-        <el-menu-item index="/hotels">
-          <el-icon><OfficeBuilding /></el-icon>
-          <span>酒店</span>
-        </el-menu-item>
-        <el-menu-item index="/restaurants">
-          <el-icon><ForkSpoon /></el-icon>
-          <span>美食</span>
-        </el-menu-item>
-        <el-menu-item index="/travel-notes">
-          <el-icon><Notebook /></el-icon>
-          <span>游记</span>
-        </el-menu-item>
-      </el-menu>
+      <nav class="nav-links">
+        <router-link to="/attractions" class="nav-item">🏛 景点</router-link>
+        <router-link to="/hotels" class="nav-item">🏨 酒店</router-link>
+        <router-link to="/restaurants" class="nav-item">🍜 美食</router-link>
+        <router-link to="/travel-notes" class="nav-item">📝 游记</router-link>
+        <router-link to="/itinerary/plan" class="nav-item ai-link">✨ AI规划</router-link>
+      </nav>
 
-      <!-- 右侧操作区 -->
       <div class="header-right">
-        <!-- 搜索框 -->
-        <el-input
-          v-model="searchKeyword"
-          placeholder="搜索景点、城市..."
-          :prefix-icon="Search"
-          class="search-input"
-          @keyup.enter="handleSearch"
-        />
+        <div class="search-box" :class="{ focused: searchFocused }">
+          <el-icon><Search /></el-icon>
+          <input v-model="keyword" placeholder="搜索目的地..." @focus="searchFocused=true" @blur="searchFocused=false" @keyup.enter="doSearch" />
+        </div>
 
-        <!-- 用户菜单 -->
         <template v-if="userStore.isLoggedIn">
-          <router-link to="/itinerary/plan" class="ai-btn">
-            <el-button type="warning" :icon="MagicStick" round size="small">
-              AI规划
-            </el-button>
-          </router-link>
-
           <el-dropdown trigger="click">
-            <span class="user-dropdown">
-              <el-avatar :size="32" :src="userStore.user?.avatar">
+            <div class="user-chip">
+              <el-avatar :size="34" :src="userStore.user?.avatar">
                 <el-icon><UserFilled /></el-icon>
               </el-avatar>
-              <span class="nickname">{{ userStore.nickname }}</span>
-              <el-icon><ArrowDown /></el-icon>
-            </span>
+              <span class="user-name">{{ userStore.nickname }}</span>
+              <el-icon class="chevron"><ArrowDown /></el-icon>
+            </div>
             <template #dropdown>
               <el-dropdown-menu>
-                <el-dropdown-item @click="$router.push('/user/profile')">
-                  <el-icon><User /></el-icon>个人中心
-                </el-dropdown-item>
-                <el-dropdown-item @click="$router.push('/user/favorites')">
-                  <el-icon><Star /></el-icon>我的收藏
-                </el-dropdown-item>
-                <el-dropdown-item @click="$router.push('/itinerary/list')">
-                  <el-icon><List /></el-icon>我的行程
-                </el-dropdown-item>
-                <el-dropdown-item v-if="userStore.isAdmin" @click="$router.push('/admin')" divided>
-                  <el-icon><Setting /></el-icon>管理后台
-                </el-dropdown-item>
-                <el-dropdown-item divided @click="handleLogout">
-                  <el-icon><SwitchButton /></el-icon>退出登录
-                </el-dropdown-item>
+                <el-dropdown-item @click="$router.push('/user/profile')">👤 个人中心</el-dropdown-item>
+                <el-dropdown-item @click="$router.push('/user/favorites')">⭐ 我的收藏</el-dropdown-item>
+                <el-dropdown-item @click="$router.push('/itinerary/list')">📋 我的行程</el-dropdown-item>
+                <el-dropdown-item v-if="userStore.isAdmin" @click="$router.push('/admin')" divided>⚙️ 管理后台</el-dropdown-item>
+                <el-dropdown-item divided @click="doLogout">🚪 退出</el-dropdown-item>
               </el-dropdown-menu>
             </template>
           </el-dropdown>
         </template>
-
         <template v-else>
-          <el-button type="primary" @click="$router.push('/login')">登录</el-button>
-          <el-button @click="$router.push('/register')">注册</el-button>
+          <div class="auth-btns">
+            <el-button round @click="$router.push('/login')">登录</el-button>
+            <el-button type="primary" round @click="$router.push('/register')">注册</el-button>
+          </div>
         </template>
       </div>
     </div>
-  </el-header>
+  </header>
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { ref } from 'vue'
+import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/userStore'
 import { ElMessage } from 'element-plus'
-import { Search } from '@element-plus/icons-vue'
 
-const route = useRoute()
-const router = useRouter()
-const userStore = useUserStore()
-const searchKeyword = ref('')
+const router = useRouter(); const userStore = useUserStore()
+const keyword = ref(''); const searchFocused = ref(false)
 
-const activeIndex = computed(() => {
-  const path = route.path
-  if (path.startsWith('/attractions')) return '/attractions'
-  if (path.startsWith('/hotels')) return '/hotels'
-  if (path.startsWith('/restaurants')) return '/restaurants'
-  if (path.startsWith('/travel-notes')) return '/travel-notes'
-  return '/'
-})
-
-function handleSearch() {
-  if (searchKeyword.value.trim()) {
-    router.push({ path: '/attractions', query: { keyword: searchKeyword.value.trim() } })
-  }
+function doSearch() {
+  if (keyword.value.trim()) router.push({ path: '/attractions', query: { keyword: keyword.value.trim() } })
 }
-
-function handleLogout() {
-  userStore.logout()
-  ElMessage.success('已退出登录')
-  router.push('/')
-}
+function doLogout() { userStore.logout(); ElMessage.success('已退出'); router.push('/') }
 </script>
 
 <style scoped>
 .main-header {
-  background: #fff;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
-  position: sticky;
-  top: 0;
-  z-index: 1000;
-  padding: 0;
-  height: 64px;
+  position: sticky; top: 0; z-index: 1000;
+  background: rgba(255,255,255,0.85);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border-bottom: 1px solid rgba(0,0,0,0.06);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.04);
 }
-
-.header-container {
-  max-width: 1400px;
-  margin: 0 auto;
-  display: flex;
-  align-items: center;
-  height: 100%;
-  padding: 0 20px;
+.header-inner {
+  max-width: 1400px; margin: 0 auto;
+  display: flex; align-items: center; height: 64px; padding: 0 24px; gap: 24px;
 }
-
-.logo {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  color: #409eff;
-  font-size: 20px;
-  font-weight: bold;
-  margin-right: 30px;
-  white-space: nowrap;
+.logo { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+.logo-icon { font-size: 28px; }
+.logo-text { font-size: 22px; font-weight: 800; background: linear-gradient(135deg, #667eea, #764ba2); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+.nav-links { display: flex; gap: 4px; }
+.nav-item {
+  padding: 8px 16px; border-radius: 10px; font-size: 14px; color: #555;
+  transition: all 0.2s; font-weight: 500;
 }
-
-.nav-menu {
-  flex: 1;
-  border-bottom: none !important;
+.nav-item:hover, .nav-item.router-link-active { background: #f0f0ff; color: #667eea; }
+.ai-link { background: linear-gradient(135deg, #fef3e2, #fff0f0); color: #e6a23c !important; }
+.ai-link:hover { background: linear-gradient(135deg, #fde6b8, #ffe0e0) !important; }
+.header-right { display: flex; align-items: center; gap: 16px; margin-left: auto; }
+.search-box {
+  display: flex; align-items: center; gap: 8px; padding: 8px 16px;
+  background: #f5f6f8; border-radius: 24px; border: 2px solid transparent;
+  transition: all 0.3s; width: 220px;
 }
-
-.nav-menu .el-menu-item {
-  border-bottom: 2px solid transparent;
-}
-
-.nav-menu .el-menu-item.is-active {
-  border-bottom-color: #409eff;
-}
-
-.header-right {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-}
-
-.search-input {
-  width: 220px;
-}
-
-.ai-btn {
-  text-decoration: none;
-}
-
-.user-dropdown {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  cursor: pointer;
-  padding: 4px 8px;
-  border-radius: 8px;
-  transition: background 0.2s;
-}
-
-.user-dropdown:hover {
-  background: #f5f7fa;
-}
-
-.nickname {
-  font-size: 14px;
-  max-width: 80px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
+.search-box.focused { background: #fff; border-color: #667eea; width: 280px; box-shadow: 0 0 0 4px rgba(102,126,234,0.1); }
+.search-box input { border: none; outline: none; background: transparent; font-size: 14px; width: 100%; color: #333; }
+.search-box .el-icon { color: #999; font-size: 18px; }
+.user-chip { display: flex; align-items: center; gap: 8px; cursor: pointer; padding: 4px 12px 4px 4px; border-radius: 20px; background: #f5f6f8; transition: all 0.2s; }
+.user-chip:hover { background: #eef0ff; }
+.user-name { font-size: 14px; font-weight: 500; }
+.chevron { font-size: 12px; color: #999; }
+.auth-btns { display: flex; gap: 8px; }
+@media (max-width: 1000px) { .nav-links { display: none; } }
+@media (max-width: 600px) { .search-box { display: none; } }
 </style>
